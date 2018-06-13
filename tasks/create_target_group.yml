@@ -1,0 +1,37 @@
+---
+- name: Get VPC Information
+  include_role:
+    name: "aws_manage_vpc"
+    tasks_from: "get_vpc_facts"
+  vars:
+    vpc_tag: "{{ aws_target_group.vpc_name }}"
+
+- name: Set resource name
+  set_fact:
+    resource_name: "{{ aws_target_group.name | upper }}"
+
+- name: Create Target Group {{ aws_target_group.name }}
+  block:
+    - name: Check for Target Group exists
+      command: "aws elbv2 describe-target-groups --name {{ aws_target_group.name }}"
+      failed_when: False
+      changed_when: False
+      register: target_group
+
+    - name: Create Target Group using AWS cli (HTTP/S)
+      command: "aws elbv2 create-target-group --name {{ aws_target_group.name }} --protocol {{ aws_target_group.protocol | upper }} --port {{ aws_target_group.port }} --vpc-id {{ vpc_net_facts.vpcs[0].id }} --health-check-protocol {{ aws_target_group.health_check_protocol | upper }} --healthy-threshold-count {{ aws_target_group.healthy_threshold_count }} --health-check-timeout {{ aws_target_group.health_check_timeout }} --health-check-interval {{ aws_target_group.health_check_interval }}"
+      when: target_group.stdout == "" and (aws_target_group.health_check_protocol | lower) != "tcp"
+
+    - name: Create Target Group using AWS cli (TCP)
+      command: "aws elbv2 create-target-group --name {{ aws_target_group.name }} --protocol {{ aws_target_group.protocol | upper }} --port {{ aws_target_group.port }} --vpc-id {{ vpc_net_facts.vpcs[0].id }} --health-check-protocol {{ aws_target_group.health_check_protocol | upper }} --healthy-threshold-count {{ aws_target_group.healthy_threshold_count }} --health-check-interval {{ aws_target_group.health_check_interval }}"
+      when: target_group.stdout == "" and (aws_target_group.health_check_protocol | lower) == "tcp"
+
+# TODO Target Groups do not have an ID for use in tagging and using the name causes an error - need to find another method
+#    - name: Tag target group
+#      command: "aws ec2 create-tags --resources {{ (target_group.stdout | from_json ).TargetGroups[0].TargetGroupName }} --tags Key=\"{{ item.0 }}\",Value=\"{{ item.1 }}\""
+#      with_together:
+#        - "{{ resource_tags | list }}"
+#        - "{{ resource_tags.values() | list }}"
+  when: true
+#  when: ansible_version.full is version_compare('2.5', '<')
+...

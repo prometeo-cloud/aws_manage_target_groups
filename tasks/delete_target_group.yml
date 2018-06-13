@@ -1,0 +1,6 @@
+---
+- name: Delete Target Group {{ aws_target_group.name }}
+  elb_target_group:
+    name: "{{ aws_target_group.name }}"
+    state: absent
+...

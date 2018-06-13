@@ -1,0 +1,15 @@
+---
+- name: Create AWS ELB Target Groups
+  include_tasks: create_target_group.yml
+  with_items: "{{ aws_target_groups }}"
+  loop_control:
+    loop_var: aws_target_group
+  when: (arg_action is not defined) or (arg_action != 'delete')
+
+- name: Delete AWS ELB Target Groups
+  include_tasks: delete_target_group.yml
+  with_items: "{{ aws_target_groups }}"
+  loop_control:
+    loop_var: aws_target_group
+  when: (arg_action is defined) and (arg_action == 'delete')
+...
